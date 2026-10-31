@@ -1,4 +1,5 @@
 import os
+import random
 import requests
 from datetime import datetime, timedelta
 from dotenv import load_dotenv
@@ -49,6 +50,10 @@ def fill_timecard():
             logging.info(f"{date_str}: Skipped (Holiday)")
             status_summary[date_str] = "Skipped (Holiday)"
         else:
+            clock_in = current_date.replace(hour=9)
+            clock_out = clock_in + timedelta(minutes=random.randint(9 * 60, 10 * 60))  # Random 9-10 hour workday
+            clock_in_str = clock_in.strftime("%Y-%m-%dT%H:%M:00.000Z")
+            clock_out_str = clock_out.strftime("%Y-%m-%dT%H:%M:00.000Z")
             payload = {
                 "employeeId": EMPLOYEE_ID,
                 "requestType": 1,
@@ -56,9 +61,9 @@ def fill_timecard():
                 "note": "Regularizing Attendance",
                 "timeEntries": [
                     {
-                        "actualTimestamp": current_date.strftime("%Y-%m-%dT09:00:00.000Z"),
-                        "adjustedTimestamp": current_date.strftime("%Y-%m-%dT09:00:00.000Z"),
-                        "timestamp": current_date.strftime("%Y-%m-%dT09:00:00.000Z"),
+                        "actualTimestamp": clock_in_str,
+                        "adjustedTimestamp": clock_in_str,
+                        "timestamp": clock_in_str,
                         "originalPunchStatus": 0,
                         "modifiedPunchStatus": 0,
                         "punchStatus": 0,
@@ -70,9 +75,9 @@ def fill_timecard():
                         "isEditable": True
                     },
                     {
-                        "actualTimestamp": current_date.strftime("%Y-%m-%dT18:00:00.000Z"),
-                        "adjustedTimestamp": current_date.strftime("%Y-%m-%dT18:00:00.000Z"),
-                        "timestamp": current_date.strftime("%Y-%m-%dT18:00:00.000Z"),
+                        "actualTimestamp": clock_out_str,
+                        "adjustedTimestamp": clock_out_str,
+                        "timestamp": clock_out_str,
                         "originalPunchStatus": 1,
                         "modifiedPunchStatus": 1,
                         "punchStatus": 1,
@@ -88,8 +93,8 @@ def fill_timecard():
             try:
                 response = requests.post(API_URL, json=payload, headers=HEADERS)
                 if response.status_code == 200:
-                    logging.info(f"{date_str}: Success")
-                    status_summary[date_str] = "Success"
+                    logging.info(f"{date_str}: Success ({clock_in:%H:%M}-{clock_out:%H:%M})")
+                    status_summary[date_str] = f"Success ({clock_in:%H:%M}-{clock_out:%H:%M})"
                 else:
                     logging.error(f"{date_str}: Failed ({response.status_code}) {response.text}")
                     status_summary[date_str] = f"Failed ({response.status_code})"
